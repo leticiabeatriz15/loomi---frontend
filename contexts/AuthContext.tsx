@@ -40,9 +40,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (nome: string, senha: string) => {
     try {
-      console.log('🔐 Tentando fazer login...', { nome });
+      console.log('Tentando fazer login...', { nome });
       const response = await authService.login({ nome, senha });
-      console.log('✅ Login bem-sucedido');
+      console.log('Login bem-sucedido');
       
       const usuarioData: Usuario = {
         nome: nome,
@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erro ao fazer login:', error);
+      console.error('Erro ao fazer login:', error);
       if (error.code === 'ERR_NETWORK') {
         throw new Error('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');
       }
