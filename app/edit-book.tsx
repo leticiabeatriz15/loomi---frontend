@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
-import { BookPlus, RefreshCw } from 'lucide-react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { BookOpen, RefreshCw, Save } from 'lucide-react-native';
 import { livroService } from '../services/api';
 import axios from 'axios';
 
-export default function AddBookPage() {
+export default function EditBookPage() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [autoLoading, setAutoLoading] = useState(false);
   const [formData, setFormData] = useState({
     isbn: '',
@@ -15,6 +17,35 @@ export default function AddBookPage() {
     secoes: 'QUERO_LER',
     andamento: 0
   });
+
+  useEffect(() => {
+    if (id) {
+      carregarLivro();
+    }
+  }, [id]);
+
+  const carregarLivro = async () => {
+    try {
+      setLoadingData(true);
+      console.log('Carregando livro com ID:', id);
+      const response = await livroService.buscarLivroPorId(id as string);
+      const livro = response.data;
+      
+      setFormData({
+        isbn: livro.isbn || '',
+        nome: livro.nome || '',
+        secoes: livro.secoes || 'QUERO_LER',
+        andamento: livro.andamento || 0
+      });
+    } catch (error: any) {
+      console.error('Erro ao carregar livro:', error);
+      Alert.alert('Erro', 'Não foi possível carregar os dados do livro', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   const handleChange = (name: string, value: string | number) => {
     setFormData(prev => ({
@@ -24,7 +55,6 @@ export default function AddBookPage() {
   };
 
   const buscarLivroPorISBN = async (isbn: string) => {
-   
     const isbnLimpo = isbn.replace(/[^0-9X]/gi, '');
     
     if (isbnLimpo.length !== 10 && isbnLimpo.length !== 13) {
@@ -35,7 +65,6 @@ export default function AddBookPage() {
       setAutoLoading(true);
       console.log('Buscando livro com ISBN:', isbnLimpo);
       
-      // Usa a API do Google Books para buscar informações
       const response = await axios.get(
         `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbnLimpo}`
       );
@@ -43,7 +72,6 @@ export default function AddBookPage() {
       if (response.data.items && response.data.items.length > 0) {
         const bookInfo = response.data.items[0].volumeInfo;
         
-        // Atualiza automaticamente o título se encontrado
         if (bookInfo.title) {
           setFormData(prev => ({
             ...prev,
@@ -62,20 +90,6 @@ export default function AddBookPage() {
     }
   };
 
-  // Atualização automática quando o ISBN é alterado
-  useEffect(() => {
-    const isbnLimpo = formData.isbn.replace(/[^0-9X]/gi, '');
-    
-    // Busca automática quando ISBN completo é digitado
-    if (isbnLimpo.length === 10 || isbnLimpo.length === 13) {
-      const timer = setTimeout(() => {
-        buscarLivroPorISBN(formData.isbn);
-      }, 800); // Aguarda 800ms após o usuário parar de digitar
-
-      return () => clearTimeout(timer);
-    }
-  }, [formData.isbn]);
-
   const handleSubmit = async () => {
     if (!formData.isbn.trim()) {
       Alert.alert('Erro', 'ISBN é obrigatório');
@@ -88,23 +102,32 @@ export default function AddBookPage() {
 
     try {
       setLoading(true);
-      console.log('Enviando livro para o backend:', formData);
-      await livroService.criarLivro(formData);
-      console.log('Livro adicionado com sucesso!');
-      Alert.alert('Sucesso', 'Livro adicionado com sucesso!', [
+      console.log('Atualizando livro:', id, formData);
+      await livroService.atualizarLivro(id as string, formData);
+      console.log('Livro atualizado com sucesso!');
+      Alert.alert('Sucesso', 'Livro atualizado com sucesso!', [
         { text: 'OK', onPress: () => router.back() }
       ]);
     } catch (error: any) {
-      console.error('Erro ao adicionar livro:', error);
+      console.error('Erro ao atualizar livro:', error);
       if (error.code === 'ERR_NETWORK') {
         Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor.');
       } else {
-        Alert.alert('Erro', 'Erro ao adicionar livro');
+        Alert.alert('Erro', 'Erro ao atualizar livro');
       }
     } finally {
       setLoading(false);
     }
   };
+
+  if (loadingData) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4f46e5" />
+        <Text style={styles.loadingText}>Carregando dados do livro...</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 
@@ -115,11 +138,11 @@ export default function AddBookPage() {
         <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.iconBox}>
-              <BookPlus color="#fff" size={24} />
+              <BookOpen color="#fff" size={24} />
             </View>
             <View style={styles.headerText}>
-              <Text style={styles.title}>Adicionar Livro</Text>
-              <Text style={styles.subtitle}>Adicione um novo livro à sua estante</Text>
+              <Text style={styles.title}>Editar Livro</Text>
+              <Text style={styles.subtitle}>Atualize as informações do livro</Text>
             </View>
           </View>
 
@@ -150,7 +173,7 @@ export default function AddBookPage() {
                 <RefreshCw color="#fff" size={18} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.helperText}>ISBN do livro (será preenchido automaticamente)</Text>
+            <Text style={styles.helperText}>ISBN do livro</Text>
           </View>
 
           {/* Título */}
@@ -214,21 +237,31 @@ export default function AddBookPage() {
             </View>
           )}
 
-          {/* Botão */}
-          <TouchableOpacity
-            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <View style={styles.buttonContent}>
-                <BookPlus color="#fff" size={20} />
-                <Text style={styles.submitButtonText}>Adicionar à Estante</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          {/* Botões */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => router.back()}
+              disabled={loading}
+            >
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <View style={styles.buttonContent}>
+                  <Save color="#fff" size={20} />
+                  <Text style={styles.submitButtonText}>Salvar Alterações</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -237,6 +270,8 @@ export default function AddBookPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f172a' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' },
+  loadingText: { color: '#94a3b8', marginTop: 12 },
   scrollView: { padding: 16 },
   card: { backgroundColor: '#1e293b', borderRadius: 12, padding: 24, borderWidth: 1, borderColor: '#334155' },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, gap: 12 },
@@ -254,9 +289,6 @@ const styles = StyleSheet.create({
   inputWithButton: { flex: 1 },
   refreshButton: { width: 48, height: 48, backgroundColor: '#4f46e5', borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   helperText: { fontSize: 12, color: '#94a3b8', marginTop: 4 },
-  rowContainer: { flexDirection: 'row', gap: 12 },
-  halfWidth: { flex: 1 },
-  textArea: { minHeight: 100, textAlignVertical: 'top' },
   statusContainer: { flexDirection: 'row', gap: 8 },
   statusButton: { flex: 1, paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#475569', backgroundColor: '#334155', alignItems: 'center' },
   statusButtonActive: { backgroundColor: '#4f46e5', borderColor: '#4f46e5' },
@@ -268,7 +300,10 @@ const styles = StyleSheet.create({
   progressBarContainer: { flex: 1, height: 32, backgroundColor: '#334155', borderRadius: 4, justifyContent: 'center', paddingHorizontal: 8 },
   progressBar: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#4f46e5', borderRadius: 4 },
   progressText: { color: '#fff', fontSize: 12, fontWeight: '600', zIndex: 1, textAlign: 'center' },
-  submitButton: { backgroundColor: '#4f46e5', paddingVertical: 14, borderRadius: 8, marginTop: 8 },
+  buttonContainer: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  cancelButton: { flex: 1, backgroundColor: '#334155', paddingVertical: 14, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#475569' },
+  cancelButtonText: { color: '#cbd5e1', fontSize: 16, fontWeight: '600' },
+  submitButton: { flex: 1, backgroundColor: '#4f46e5', paddingVertical: 14, borderRadius: 8 },
   submitButtonDisabled: { opacity: 0.5 },
   buttonContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },

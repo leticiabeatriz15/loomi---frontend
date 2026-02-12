@@ -8,10 +8,10 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 segundos de timeout
+  timeout: 10000, 
 });
 
-// Interceptor para log de requisições (útil para debug)
+
 api.interceptors.request.use(
   config => {
     console.log(`${config.method?.toUpperCase()} ${config.url}`);
@@ -23,7 +23,7 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para tratamento de erros
+
 api.interceptors.response.use(
   response => {
     console.log(`${response.config.method?.toUpperCase()} ${response.config.url} - Status: ${response.status}`);

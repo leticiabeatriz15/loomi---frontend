@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Search, Plus, Trash2 } from 'lucide-react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { Search, Plus, Trash2, Edit } from 'lucide-react-native';
 import { livroService } from '../../services/api';
 
 interface Livro {
@@ -21,9 +21,11 @@ export default function BookshelfPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
 
-  useEffect(() => {
-    carregarLivros();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      carregarLivros();
+    }, [])
+  );
 
   useEffect(() => {
     aplicarFiltros();
@@ -232,13 +234,23 @@ export default function BookshelfPage() {
                 </View>
               )}
 
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDelete(livro.id, livro.nome)}
-              >
-                <Trash2 color="#ef4444" size={16} />
-                <Text style={styles.deleteButtonText}>Remover</Text>
-              </TouchableOpacity>
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => router.push(`/edit-book?id=${livro.id}`)}
+                >
+                  <Edit color="#4f46e5" size={16} />
+                  <Text style={styles.editButtonText}>Editar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDelete(livro.id, livro.nome)}
+                >
+                  <Trash2 color="#ef4444" size={16} />
+                  <Text style={styles.deleteButtonText}>Remover</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))
         )}
@@ -285,7 +297,10 @@ const styles = StyleSheet.create({
   progressPercent: { fontSize: 12, color: '#94a3b8' },
   progressBarContainer: { height: 6, backgroundColor: '#334155', borderRadius: 3, overflow: 'hidden' },
   progressBar: { height: '100%', backgroundColor: '#4f46e5' },
-  deleteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ef444410', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: '#ef4444', gap: 8 },
+  actionButtons: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  editButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4f46e510', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: '#4f46e5', gap: 8 },
+  editButtonText: { color: '#4f46e5', fontSize: 14, fontWeight: '600' },
+  deleteButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ef444410', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: '#ef4444', gap: 8 },
   deleteButtonText: { color: '#ef4444', fontSize: 14, fontWeight: '600' },
   emptyContainer: { paddingVertical: 48, alignItems: 'center' },
   emptyText: { color: '#94a3b8', fontSize: 16, textAlign: 'center', lineHeight: 24 },
